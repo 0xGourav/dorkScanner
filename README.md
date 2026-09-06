@@ -18,8 +18,9 @@ pip3 install -r requirements.txt
 ```
 $ python3 dorkScanner.py --help
 usage: dorkScanner.py [-h] [-q QUERY] [-e ENGINE] [-p PAGES] [-P PROCESSES]
+                      [-t TIMEOUT] [-o OUTPUT]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -q QUERY, --query QUERY
                         Specify the Search Query within ''
@@ -29,6 +30,10 @@ optional arguments:
                         Specify the Number of Pages (Default: 1)
   -P PROCESSES, --processes PROCESSES
                         Specify the Number of Processes (Default: 2)
+  -t TIMEOUT, --timeout TIMEOUT
+                        Specify the Request Timeout in Seconds (Default: 10)
+  -o OUTPUT, --output OUTPUT
+                        Save the found URLs to a file
 
 ```
 
