@@ -22,7 +22,6 @@ def get_arguments():
         description='Scrape search engines with dork queries to find exposed URLs.'
     )
     parser.add_argument('-q', '--query', dest='query', help="Specify the Search Query within ''")
-    parser.add_argument('-e', '--engine', dest='engine', help='Specify the Search Engine (Google/Bing)')
     parser.add_argument('-p', '--pages', dest='pages', type=int, help='Specify the Number of Pages (Default: 1)')
     parser.add_argument('-P', '--processes', dest='processes', type=int,
                          help='Specify the Number of Processes (Default: 2)')
@@ -81,9 +80,24 @@ def bing_search(query, page, timeout=DEFAULT_TIMEOUT):
     return result
 
 
-def search_result(q, engine, pages, processes, result, output=None):
+# Every engine that a search will be run against. Results from all of them
+# are combined into a single, deduplicated list.
+ENGINES = {
+    'google': google_search,
+    'bing': bing_search,
+}
+
+
+def run_job(job):
+    """Unwrap and execute one (engine, page) job. Must be top-level so it
+    can be pickled for multiprocessing."""
+    return job()
+
+
+def search_result(q, pages, processes, result, output=None):
     print('-' * 70)
-    print(f'Searching for: {q} in {pages} page(s) of {engine} with {processes} processes')
+    engines = ', '.join(ENGINES)
+    print(f'Searching for: {q} in {pages} page(s) across [{engines}] with {processes} processes')
     print('-' * 70)
     print()
 
@@ -140,16 +154,6 @@ def run(options):
         print(RED + '[-] No query entered!...Exiting the Program....')
         return
 
-    engine = (options.engine or input('[?] Choose the Search Engine (Google/Bing): ')).strip().lower()
-
-    if engine == 'google':
-        target = partial(google_search, query, timeout=options.timeout or DEFAULT_TIMEOUT)
-    elif engine == 'bing':
-        target = partial(bing_search, query, timeout=options.timeout or DEFAULT_TIMEOUT)
-    else:
-        print(RED + '[-] Invalid Option Entered!...Exiting the Program....')
-        return
-
     pages = options.pages or 1
     processes = options.processes or 2
 
@@ -157,10 +161,17 @@ def run(options):
         print(RED + '[-] Pages and Processes must be positive integers!...Exiting the Program....')
         return
 
-    with Pool(processes) as p:
-        result = p.map(target, range(pages))
+    timeout = options.timeout or DEFAULT_TIMEOUT
+    jobs = [
+        partial(engine_fn, query, page, timeout=timeout)
+        for engine_fn in ENGINES.values()
+        for page in range(pages)
+    ]
 
-    search_result(query, engine, pages, processes, result, output=options.output)
+    with Pool(processes) as p:
+        result = p.map(run_job, jobs)
+
+    search_result(query, pages, processes, result, output=options.output)
 
 
 def main():
@@ -169,9 +180,9 @@ def main():
 
     try:
         run(options)
-        # Keep prompting for another search until both --query and --engine
-        # were supplied on the command line, in which case a single run suffices.
-        while not (options.query and options.engine):
+        # Keep prompting for another search until --query was supplied on
+        # the command line, in which case a single run suffices.
+        while not options.query:
             run(options)
     except KeyboardInterrupt:
         print('\nThanks For using!')

@@ -1,6 +1,6 @@
 # DORK SCANNER #
 
-A typical search engine dork scanner that scrapes search engines with queries that you provide in order to find vulnerable URLs.
+A typical search engine dork scanner that scrapes search engines with queries that you provide in order to find vulnerable URLs. Every search is run against **all supported search engines** (currently Google and Bing) at once, and the results are combined into a single, deduplicated list.
 
 
 ## Introduction ##
@@ -17,15 +17,13 @@ pip3 install -r requirements.txt
 
 ```
 $ python3 dorkScanner.py --help
-usage: dorkScanner.py [-h] [-q QUERY] [-e ENGINE] [-p PAGES] [-P PROCESSES]
-                      [-t TIMEOUT] [-o OUTPUT]
+usage: dorkScanner.py [-h] [-q QUERY] [-p PAGES] [-P PROCESSES] [-t TIMEOUT]
+                      [-o OUTPUT]
 
 options:
   -h, --help            show this help message and exit
   -q QUERY, --query QUERY
                         Specify the Search Query within ''
-  -e ENGINE, --engine ENGINE
-                        Specify the Search Engine (Google/Bing)
   -p PAGES, --pages PAGES
                         Specify the Number of Pages (Default: 1)
   -P PROCESSES, --processes PROCESSES
@@ -37,11 +35,10 @@ options:
 
 ```
 
-### You can also specify the arguments inside the program:
+### You can also specify the query inside the program:
 
 ```
 Enter the Search Query: 
-Choose the Search Engine (Google/Bing):
 ```
 
 ## Tutorial ##
