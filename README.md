@@ -44,3 +44,7 @@ Enter the Search Query:
 ## Tutorial ##
 
 [![asciicast](https://asciinema.org/a/ORUdQnAhDQb9CDquTXVrk6yTc.png)](https://asciinema.org/a/ORUdQnAhDQb9CDquTXVrk6yTc)
+
+## Author ##
+
+Maintained by [Gourav](https://github.com/0xGourav).
