@@ -27,7 +27,7 @@ options:
   -p PAGES, --pages PAGES
                         Specify the Number of Pages (Default: 1)
   -P PROCESSES, --processes PROCESSES
-                        Specify the Number of Processes (Default: 2)
+                        Specify the Number of Worker Threads (Default: 2)
   -t TIMEOUT, --timeout TIMEOUT
                         Specify the Request Timeout in Seconds (Default: 10)
   -o OUTPUT, --output OUTPUT

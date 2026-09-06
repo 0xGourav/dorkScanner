@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import re
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from multiprocessing import Pool
 from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
@@ -26,7 +26,7 @@ def get_arguments():
     parser.add_argument('-q', '--query', dest='query', help="Specify the Search Query within ''")
     parser.add_argument('-p', '--pages', dest='pages', type=int, help='Specify the Number of Pages (Default: 1)')
     parser.add_argument('-P', '--processes', dest='processes', type=int,
-                         help='Specify the Number of Processes (Default: 2)')
+                         help='Specify the Number of Worker Threads (Default: 2)')
     parser.add_argument('-t', '--timeout', dest='timeout', type=int,
                          help=f'Specify the Request Timeout in Seconds (Default: {DEFAULT_TIMEOUT})')
     parser.add_argument('-o', '--output', dest='output', help='Save the found URLs to a file')
@@ -59,7 +59,7 @@ def google_search(query, page, timeout=DEFAULT_TIMEOUT):
         return []
 
     soup = bsoup(resp.text, 'html.parser')
-    links = soup.findAll('div', {'class': 'yuRUbf'})
+    links = soup.find_all('div', {'class': 'yuRUbf'})
     result = []
     for link in links:
         anchor = link.find('a')
@@ -77,7 +77,7 @@ def bing_search(query, page, timeout=DEFAULT_TIMEOUT):
         return []
 
     soup = bsoup(resp.text, 'html.parser')
-    links = soup.findAll('cite')
+    links = soup.find_all('cite')
     result = [link.text for link in links if link.text]
     return result
 
@@ -100,7 +100,7 @@ def duckduckgo_search(query, page, timeout=DEFAULT_TIMEOUT):
         return []
 
     soup = bsoup(resp.text, 'html.parser')
-    links = soup.findAll('a', {'class': 'result__a'})
+    links = soup.find_all('a', {'class': 'result__a'})
     result = [_unwrap_duckduckgo(link.get('href')) for link in links if link.get('href')]
     return result
 
@@ -121,7 +121,7 @@ def yahoo_search(query, page, timeout=DEFAULT_TIMEOUT):
         return []
 
     soup = bsoup(resp.text, 'html.parser')
-    links = soup.findAll('a', {'class': 'ac-algo'})
+    links = soup.find_all('a', {'class': 'ac-algo'})
     result = [_unwrap_yahoo(link.get('href')) for link in links if link.get('href')]
     return result
 
@@ -137,15 +137,14 @@ ENGINES = {
 
 
 def run_job(job):
-    """Unwrap and execute one (engine, page) job. Must be top-level so it
-    can be pickled for multiprocessing."""
+    """Unwrap and execute one (engine, page) job."""
     return job()
 
 
 def search_result(q, pages, processes, result, output=None):
     print('-' * 70)
     engines = ', '.join(ENGINES)
-    print(f'Searching for: {q} in {pages} page(s) across [{engines}] with {processes} processes')
+    print(f'Searching for: {q} in {pages} page(s) across [{engines}] with {processes} threads')
     print('-' * 70)
     print()
 
@@ -202,8 +201,8 @@ def run(options):
         for page in range(pages)
     ]
 
-    with Pool(processes) as p:
-        result = p.map(run_job, jobs)
+    with ThreadPoolExecutor(max_workers=processes) as pool:
+        result = list(pool.map(run_job, jobs))
 
     search_result(query, pages, processes, result, output=options.output)
 
