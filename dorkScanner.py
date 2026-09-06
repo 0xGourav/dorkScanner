@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import argparse
+import re
 from functools import partial
 from multiprocessing import Pool
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 from bs4 import BeautifulSoup as bsoup
 
 
-GREEN, RED, YELLOW = '\033[1;32m', '\033[91m', '\033[93m'
+RED, YELLOW = '\033[91m', '\033[93m'
 
 USER_AGENT = (
     'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) '
@@ -80,11 +82,57 @@ def bing_search(query, page, timeout=DEFAULT_TIMEOUT):
     return result
 
 
+def _unwrap_duckduckgo(href):
+    """DuckDuckGo's HTML results link through /l/?uddg=<encoded target>."""
+    parsed = urlparse(href)
+    if parsed.path == '/l/':
+        target = parse_qs(parsed.query).get('uddg')
+        if target:
+            return unquote(target[0])
+    return href
+
+
+def duckduckgo_search(query, page, timeout=DEFAULT_TIMEOUT):
+    base_url = 'https://html.duckduckgo.com/html/'
+    params = {'q': query, 's': page * 30}
+    resp = fetch(base_url, params, timeout)
+    if resp is None:
+        return []
+
+    soup = bsoup(resp.text, 'html.parser')
+    links = soup.findAll('a', {'class': 'result__a'})
+    result = [_unwrap_duckduckgo(link.get('href')) for link in links if link.get('href')]
+    return result
+
+
+def _unwrap_yahoo(href):
+    """Yahoo's HTML results link through r.search.yahoo.com/.../RU=<encoded target>/..."""
+    match = re.search(r'/RU=([^/]+)/', href)
+    if match:
+        return unquote(match.group(1))
+    return href
+
+
+def yahoo_search(query, page, timeout=DEFAULT_TIMEOUT):
+    base_url = 'https://search.yahoo.com/search'
+    params = {'p': query, 'b': page * 10 + 1}
+    resp = fetch(base_url, params, timeout)
+    if resp is None:
+        return []
+
+    soup = bsoup(resp.text, 'html.parser')
+    links = soup.findAll('a', {'class': 'ac-algo'})
+    result = [_unwrap_yahoo(link.get('href')) for link in links if link.get('href')]
+    return result
+
+
 # Every engine that a search will be run against. Results from all of them
 # are combined into a single, deduplicated list.
 ENGINES = {
     'google': google_search,
     'bing': bing_search,
+    'duckduckgo': duckduckgo_search,
+    'yahoo': yahoo_search,
 }
 
 
@@ -133,20 +181,6 @@ def search_result(q, pages, processes, result, output=None):
             print(RED + f'[-] Could not write to {output}: {exc}')
 
 
-banner = '''
-
-    ██████╗░░█████╗░██████╗░██╗░░██╗  ░██████╗░█████╗░░█████╗░███╗░░██╗███╗░░██╗███████╗██████╗░
-    ██╔══██╗██╔══██╗██╔══██╗██║░██╔╝  ██╔════╝██╔══██╗██╔══██╗████╗░██║████╗░██║██╔════╝██╔══██╗
-    ██║░░██║██║░░██║██████╔╝█████═╝░  ╚█████╗░██║░░╚═╝███████║██╔██╗██║██╔██╗██║█████╗░░██████╔╝
-    ██║░░██║██║░░██║██╔══██╗██╔═██╗░  ░╚═══██╗██║░░██╗██╔══██║██║╚████║██║╚████║██╔══╝░░██╔══██╗
-    ██████╔╝╚█████╔╝██║░░██║██║░╚██╗  ██████╔╝╚█████╔╝██║░░██║██║░╚███║██║░╚███║███████╗██║░░██║
-    ╚═════╝░░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝  ╚═════╝░░╚════╝░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝░░╚══╝╚══════╝╚═╝░░╚═╝
-
-    Made By: Madhav Mehndiratta (github.com/madhavmehndiratta)
-
-'''
-
-
 def run(options):
     print()
     query = options.query or input('[?] Enter the Search Query: ').strip()
@@ -176,7 +210,6 @@ def run(options):
 
 def main():
     options = get_arguments()
-    print(GREEN + banner)
 
     try:
         run(options)

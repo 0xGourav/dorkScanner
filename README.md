@@ -1,6 +1,6 @@
 # DORK SCANNER #
 
-A typical search engine dork scanner that scrapes search engines with queries that you provide in order to find vulnerable URLs. Every search is run against **all supported search engines** (currently Google and Bing) at once, and the results are combined into a single, deduplicated list.
+A typical search engine dork scanner that scrapes search engines with queries that you provide in order to find vulnerable URLs. Every search is run against **all supported search engines** (currently Google, Bing, DuckDuckGo, and Yahoo) at once, and the results are combined into a single, deduplicated list.
 
 
 ## Introduction ##
